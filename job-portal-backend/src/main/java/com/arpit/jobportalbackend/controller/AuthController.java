@@ -30,21 +30,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/auth")
 public class AuthController {
 
-   /* @Autowired
-    private final AuthService authService;
-
-
-    @PostMapping("/register")
-    public User register(@RequestBody User user){                   // register in db
-        return authService.register(user);
-    }
-
-    @PostMapping("/login")
-    public User login(@RequestParam String email,
-                      @RequestParam String password){   // login in db
-        return authService.login(email,password);
-    }*/
-
+ 
     @Autowired
     private UserDetailsService userDetailsService;
 
@@ -65,7 +51,7 @@ public class AuthController {
     private  AuthService authService;
 
     @PostMapping("/register")
-    public User register(@RequestBody User user){
+    public User register(@jakarta.validation.Valid @RequestBody User user){
 
         user.setPassword(encoder.encode(user.getPassword()));
         if(user.getRole() == null) {
@@ -75,18 +61,27 @@ public class AuthController {
         return authService.register(user);
     }
 
+    @Autowired
+    private com.arpit.jobportalbackend.repository.UserRepository userRepo;
+
     @PostMapping("/login")
-    public ResponseEntity<JwtResponse> login(@RequestBody JwtRequest request) {
+    public ResponseEntity<JwtResponse> login(@jakarta.validation.Valid @RequestBody JwtRequest request) {
 
         this.doAuthenticate(request.getEmail(), request.getPassword());
-
 
         UserDetails userDetails = userDetailsService.loadUserByUsername(request.getEmail());
         String token = this.helper.generateToken(userDetails);
 
+        User user = userRepo.findByEmail(request.getEmail()).orElse(null);
+
         JwtResponse response = JwtResponse.builder()
                 .jwtToken(token)
-                .userName(userDetails.getUsername()).build();
+                .userName(userDetails.getUsername())
+                .id(user != null ? user.getId() : null)
+                .name(user != null ? user.getName() : userDetails.getUsername())
+                .email(user != null ? user.getEmail() : userDetails.getUsername())
+                .role(user != null ? user.getRole() : Role.CANDIDATE)
+                .build();
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 

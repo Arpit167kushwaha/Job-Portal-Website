@@ -24,11 +24,16 @@ public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    @jakarta.validation.constraints.NotBlank(message = "Full name is required")
     private String name;
 
-    @Column( nullable = false)
+    @jakarta.validation.constraints.NotBlank(message = "Email address is required")
+    @jakarta.validation.constraints.Email(message = "Please enter a valid email address (e.g. user@domain.com)")
+    @Column(nullable = false, unique = true)
     private String email;
 
+    @com.fasterxml.jackson.annotation.JsonProperty(access = com.fasterxml.jackson.annotation.JsonProperty.Access.WRITE_ONLY)
+    @jakarta.validation.constraints.NotBlank(message = "Password is required")
     @Column(nullable = false)
     private String password;
 

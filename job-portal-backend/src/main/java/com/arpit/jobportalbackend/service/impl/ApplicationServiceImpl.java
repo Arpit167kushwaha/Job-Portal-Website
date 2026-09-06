@@ -199,12 +199,18 @@ public class ApplicationServiceImpl implements ApplicationService {
     private AppliedJobResponse mapToAppliedJobResponse(Application application) {
         AppliedJobResponse response = new AppliedJobResponse();
 
-        response.setJobId(application.getJob().getId());
-        response.setTitle(application.getJob().getTitle());
-        response.setCompany(application.getJob().getCompanyName());
-        response.setLocation(application.getJob().getLocation());
-        response.setSalary(application.getJob().getSalary());
-        response.setApplicationStatus(application.getStatus().name());
+        response.setApplicationId(application.getId());
+        if (application.getJob() != null) {
+            response.setJobId(application.getJob().getId());
+            response.setTitle(application.getJob().getTitle());
+            response.setCompany(application.getJob().getCompanyName());
+            response.setLocation(application.getJob().getLocation());
+            response.setSalary(application.getJob().getSalary());
+            response.setJobStatus(application.getJob().getJobStatus() != null ? application.getJob().getJobStatus().name() : "ACTIVE");
+            response.setJobType(application.getJob().getJobType() != null ? application.getJob().getJobType().name() : "FULLTIME");
+            response.setExperience(application.getJob().getExperience());
+        }
+        response.setApplicationStatus(application.getStatus() != null ? application.getStatus().name() : "PENDING");
 
         return response;
     }
@@ -212,10 +218,17 @@ public class ApplicationServiceImpl implements ApplicationService {
     private ApplicantResponse mapToApplicantResponse(Application application) {
            ApplicantResponse response = new ApplicantResponse();
            response.setApplicationId(application.getId());
-           response.setUserId(application.getUser().getId());
-           response.setEmail(application.getUser().getEmail());
-           response.setName(application.getUser().getName());
-           response.setStatus(application.getStatus().name());
+           if (application.getUser() != null) {
+               response.setUserId(application.getUser().getId());
+               response.setEmail(application.getUser().getEmail());
+               response.setName(application.getUser().getName());
+               response.setResumeUrl(application.getUser().getResumeUrl());
+               response.setProfilePictureUrl(application.getUser().getProfilePictureUrl());
+               response.setCompanyName(application.getUser().getCompanyName());
+               response.setSkills(application.getUser().getSkills());
+               response.setExperience(application.getUser().getExperience());
+           }
+           response.setStatus(application.getStatus() != null ? application.getStatus().name() : "PENDING");
 
         return response;
     }

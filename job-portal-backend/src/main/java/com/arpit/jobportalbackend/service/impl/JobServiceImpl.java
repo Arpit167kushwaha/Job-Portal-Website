@@ -30,7 +30,9 @@ public class JobServiceImpl implements JobService {
     private final UserRepository userRepo;
    @Autowired
    private final ApplicationRepository appRepo;
-   @Override
+   @Autowired
+   private final com.arpit.jobportalbackend.repository.SavedJobRepository savedJobRepo;
+    @Override
     public JobResponse createJob(Job job){       //Post a job by recruiter
         String email = SecurityUtils.getLoggedInUserEmail();
 
@@ -42,7 +44,9 @@ public class JobServiceImpl implements JobService {
             job.setJobStatus(JobStatus.ACTIVE);
         }
 
-        if(job.getExpiryDate().isBefore(LocalDate.now())) {
+        if(job.getExpiryDate() == null) {
+            job.setExpiryDate(LocalDate.now().plusMonths(1));
+        } else if(job.getExpiryDate().isBefore(LocalDate.now())) {
              throw new RuntimeException("Expiry Date Must be future date");
         }
 
@@ -71,58 +75,58 @@ public class JobServiceImpl implements JobService {
     @Override
     public JobResponse updateJob(Long jobId,Job updatedJob) {
        String email = SecurityUtils.getLoggedInUserEmail();
-       User recruiter = userRepo.findByEmail(email).orElseThrow();
-
+       User recruiter = userRepo.findByEmail(email).orElseThrow(() -> new RuntimeException("User Not Found"));
 
        Job job = jobRepo.findById(jobId).orElseThrow(() ->new RuntimeException("Job not found"));
 
        if(!job.getPostedBy().getId().equals(recruiter.getId())) {
            throw new RuntimeException("You can update only your own job");
        }
-       job.setTitle(updatedJob.getTitle());
-       job.setDescription(updatedJob.getDescription());
-       job.setSalary(updatedJob.getSalary());
-       job.setLocation(updatedJob.getLocation());
-       job.setCompanyName(updatedJob.getCompanyName());
-       job.setPostedBy(updatedJob.getPostedBy());
+       if (updatedJob.getTitle() != null) job.setTitle(updatedJob.getTitle());
+       if (updatedJob.getDescription() != null) job.setDescription(updatedJob.getDescription());
+       if (updatedJob.getSalary() != null) job.setSalary(updatedJob.getSalary());
+       if (updatedJob.getLocation() != null) job.setLocation(updatedJob.getLocation());
+       if (updatedJob.getCompanyName() != null) job.setCompanyName(updatedJob.getCompanyName());
+       if (updatedJob.getExperience() != null) job.setExperience(updatedJob.getExperience());
+       if (updatedJob.getJobType() != null) job.setJobType(updatedJob.getJobType());
+       if (updatedJob.getExpiryDate() != null) job.setExpiryDate(updatedJob.getExpiryDate());
+       if (updatedJob.getJobStatus() != null) job.setJobStatus(updatedJob.getJobStatus());
+
        Job saved = jobRepo.save(job);
-
        return mapToResponse(saved);
-
     }
 
     @Override
     public JobResponse getJobById(Long id){
-
         Job job= jobRepo.findById(id).orElseThrow(() -> new RuntimeException("Job Not Found"));
         return mapToResponse(job);
     }  //Individual Job detail page
 
     @Override
+    @org.springframework.transaction.annotation.Transactional
     public void deleteJob(Long jobId){
-
        String email = SecurityUtils.getLoggedInUserEmail();
 
-       User recruiter = userRepo.findByEmail(email).orElseThrow();
+       User recruiter = userRepo.findByEmail(email).orElseThrow(() -> new RuntimeException("User Not Found"));
        Job job = jobRepo.findById(jobId).orElseThrow(()-> new RuntimeException("job not found"));
        if(!job.getPostedBy().getId().equals(recruiter.getId())) {
            throw new RuntimeException("You can only delete your own job");
        }
-        jobRepo.deleteById(jobId);
+       appRepo.deleteAll(appRepo.findByjobId(jobId));
+       savedJobRepo.deleteAll(savedJobRepo.findAll().stream().filter(sj -> sj.getJob() != null && sj.getJob().getId().equals(jobId)).toList());
+       jobRepo.deleteById(jobId);
     } //Job can be deleted by the recruiter
-
 
     @Override
     public void closeJob(Long jobId){
        String email = SecurityUtils.getLoggedInUserEmail();
-       User recruiter = userRepo.findByEmail(email).orElseThrow();
+       User recruiter = userRepo.findByEmail(email).orElseThrow(() -> new RuntimeException("User Not Found"));
        Job job = jobRepo.findById(jobId).orElseThrow(()->new RuntimeException("Job not found"));
 
        if(!job.getPostedBy().getId().equals(recruiter.getId())) {
            throw new RuntimeException("You can close only your own job");
        }
-        job.setJobStatus(JobStatus.CLOSED);
-
+       job.setJobStatus(JobStatus.CLOSED);
        jobRepo.save(job);
     }
 

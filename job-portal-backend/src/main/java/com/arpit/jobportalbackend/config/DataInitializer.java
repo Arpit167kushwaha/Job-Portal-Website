@@ -5,6 +5,7 @@ import com.arpit.jobportalbackend.repository.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,80 +22,92 @@ public class DataInitializer implements CommandLineRunner {
     private final JobRepository jobRepository;
     private final CompanyRepository companyRepository;
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     public DataInitializer(ApplicationRepository applicationRepository,
                            SavedJobRepository savedJobRepository,
                            JobRepository jobRepository,
                            CompanyRepository companyRepository,
-                           UserRepository userRepository) {
+                           UserRepository userRepository,
+                           PasswordEncoder passwordEncoder) {
         this.applicationRepository = applicationRepository;
         this.savedJobRepository = savedJobRepository;
         this.jobRepository = jobRepository;
         this.companyRepository = companyRepository;
         this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Override
     @Transactional
     public void run(String... args) throws Exception {
-        logger.info("DATA INITIALIZER: Clearing existing data and inserting sample data (requested)");
+        if (userRepository.count() > 0) {
+            logger.info("DATA INITIALIZER: Existing database records found. Skipping seed.");
+            return;
+        }
 
-        // delete in dependent-first order
-        applicationRepository.deleteAll();
-        savedJobRepository.deleteAll();
-        jobRepository.deleteAll();
-        companyRepository.deleteAll();
-        userRepository.deleteAll();
+        logger.info("DATA INITIALIZER: Seeding initial sample data with secure BCrypt passwords...");
 
-        // create sample users
+        // Sample Recruiter
         User recruiter = User.builder()
-                .name("Alice Recruiter")
-                .email("alice.recruiter@example.com")
-                .password("password")
+                .name("Arpit Recruiter")
+                .email("recruiter@google.com")
+                .password(passwordEncoder.encode("password123"))
                 .role(Role.RECRUITER)
-                .companyName("Acme Corp")
-                .experience(5.0f)
+                .companyName("Google")
+                .experience(6.0f)
+                .skills("Tech Recruiting, Leadership, Talent Acquisition")
                 .build();
 
+        // Sample Candidate
         User candidate = User.builder()
-                .name("Bob Candidate")
-                .email("bob.candidate@example.com")
-                .password("password")
+                .name("Arpit Candidate")
+                .email("candidate@dev.com")
+                .password(passwordEncoder.encode("password123"))
                 .role(Role.CANDIDATE)
-                .experience(2.0f)
+                .experience(3.0f)
+                .skills("Java, Spring Boot, React, TypeScript, MySQL, Docker")
+                .companyName("Freelance")
                 .build();
 
         List<User> savedUsers = userRepository.saveAll(List.of(recruiter, candidate));
         User savedRecruiter = savedUsers.get(0);
+        User savedCandidate = savedUsers.get(1);
 
-        // create companies
-        Company acme = Company.builder()
-                .name("Acme Corp")
-                .description("Industry-leading provider of business solutions.")
-                .location("New York, NY")
-                .website("https://www.acme.example.com")
+        // Companies
+        Company google = Company.builder()
+                .name("Google")
+                .description("World's leading technology company specializing in search, cloud computing, and AI.")
+                .location("Bangalore, India")
+                .website("https://careers.google.com")
                 .createdBy(savedRecruiter)
                 .build();
 
-        Company globex = Company.builder()
-                .name("Globex Technologies")
-                .description("Cutting-edge AI and cloud services.")
-                .location("San Francisco, CA")
-                .website("https://www.globex.example.com")
+        Company microsoft = Company.builder()
+                .name("Microsoft")
+                .description("Empowering every person and organization on the planet to achieve more.")
+                .location("Hyderabad, India")
+                .website("https://careers.microsoft.com")
                 .createdBy(savedRecruiter)
                 .build();
 
-        List<Company> savedCompanies = companyRepository.saveAll(List.of(acme, globex));
-        Company savedAcme = savedCompanies.get(0);
-        Company savedGlobex = savedCompanies.get(1);
+        Company amazon = Company.builder()
+                .name("Amazon")
+                .description("Earth's most customer-centric company and pioneer of AWS cloud infrastructure.")
+                .location("Bangalore, India")
+                .website("https://amazon.jobs")
+                .createdBy(savedRecruiter)
+                .build();
 
-        // create sample jobs
+        companyRepository.saveAll(List.of(google, microsoft, amazon));
+
+        // Sample Jobs
         Job j1 = Job.builder()
-                .title("Senior Java Backend Engineer")
-                .description("Design and develop scalable backend services using Spring Boot and microservices architecture.")
-                .salary(150000.0)
-                .location("New York, NY")
-                .companyName(savedAcme.getName())
+                .title("Senior Full Stack Java Engineer")
+                .description("<h4>About the Role</h4><p>We are seeking a talented Senior Full Stack Engineer to architect high-performance distributed microservices using Spring Boot, React.js, and Cloud Native technologies.</p><h4>Requirements</h4><ul><li>5+ years of hands-on Java & Spring Boot experience</li><li>Proficiency with modern React, TypeScript, and REST APIs</li><li>Deep knowledge of MySQL, Redis, and JPA performance tuning</li><li>Experience with Docker and CI/CD pipelines</li></ul>")
+                .salary(28.0)
+                .location("Bangalore, India")
+                .companyName("Google")
                 .experience(5.0f)
                 .jobType(JobType.FULLTIME)
                 .expiryDate(LocalDate.now().plusDays(60))
@@ -103,11 +116,11 @@ public class DataInitializer implements CommandLineRunner {
                 .build();
 
         Job j2 = Job.builder()
-                .title("Frontend Engineer (React)")
-                .description("Build responsive UIs with React, TypeScript, and Tailwind.")
-                .salary(120000.0)
+                .title("Frontend Developer (React & TypeScript)")
+                .description("<h4>About the Role</h4><p>Join our core web experience team building responsive, accessible, and fast interfaces for millions of users worldwide.</p><h4>Requirements</h4><ul><li>3+ years with React.js, TypeScript, and modern CSS/Tailwind</li><li>Experience with state management and WebSockets</li><li>Passion for clean UI/UX and micro-interactions</li></ul>")
+                .salary(18.0)
                 .location("Remote")
-                .companyName(savedGlobex.getName())
+                .companyName("Microsoft")
                 .experience(3.0f)
                 .jobType(JobType.REMOTE)
                 .expiryDate(LocalDate.now().plusDays(45))
@@ -116,24 +129,24 @@ public class DataInitializer implements CommandLineRunner {
                 .build();
 
         Job j3 = Job.builder()
-                .title("Data Scientist")
-                .description("Work on ML models and data pipelines.")
-                .salary(140000.0)
-                .location("San Francisco, CA")
-                .companyName(savedGlobex.getName())
+                .title("Cloud DevOps & Infrastructure Engineer")
+                .description("<h4>About the Role</h4><p>Automate, scale, and secure our global multi-cloud infrastructure and continuous integration pipelines.</p><h4>Requirements</h4><ul><li>Expertise with Kubernetes, Docker, and Terraform</li><li>Experience monitoring distributed microservices with Prometheus & Grafana</li><li>Strong scripting in Python or Bash</li></ul>")
+                .salary(24.0)
+                .location("Hyderabad, India")
+                .companyName("Amazon")
                 .experience(4.0f)
                 .jobType(JobType.FULLTIME)
-                .expiryDate(LocalDate.now().plusDays(30))
+                .expiryDate(LocalDate.now().plusDays(50))
                 .postedBy(savedRecruiter)
                 .jobStatus(JobStatus.ACTIVE)
                 .build();
 
         Job j4 = Job.builder()
-                .title("Intern - Software Engineering")
-                .description("Summer internship for software engineering students.")
-                .salary(30000.0)
-                .location("New York, NY")
-                .companyName(savedAcme.getName())
+                .title("Software Engineering Intern (Summer 2026)")
+                .description("<h4>About the Role</h4><p>Exciting 6-month internship opportunity for passionate learners to work directly on customer-facing features alongside senior engineering mentors.</p><h4>Requirements</h4><ul><li>Pursuing B.Tech / M.Tech in Computer Science or related field</li><li>Strong understanding of Data Structures and Algorithms</li><li>Foundational knowledge of Java, Spring Boot, or React</li></ul>")
+                .salary(6.0)
+                .location("Bangalore, India")
+                .companyName("Google")
                 .experience(0.0f)
                 .jobType(JobType.INTERN)
                 .expiryDate(LocalDate.now().plusDays(90))
@@ -142,61 +155,47 @@ public class DataInitializer implements CommandLineRunner {
                 .build();
 
         Job j5 = Job.builder()
-                .title("Part-time Technical Writer")
-                .description("Create clear, concise technical documentation.")
-                .salary(40000.0)
-                .location("Austin, TX")
-                .companyName(savedAcme.getName())
-                .experience(2.0f)
-                .jobType(JobType.PARTTIME)
+                .title("Backend Engineer - Spring Cloud & Microservices")
+                .description("<h4>About the Role</h4><p>Build enterprise cloud services with high throughput, low latency, and robust fault-tolerance.</p><h4>Requirements</h4><ul><li>Strong background in Java 21, Spring Boot 3, and Spring Security</li><li>Experience designing resilient event-driven systems with Kafka</li><li>Understanding of database partitioning and caching</li></ul>")
+                .salary(22.0)
+                .location("Pune, India")
+                .companyName("Netflix")
+                .experience(3.5f)
+                .jobType(JobType.FULLTIME)
                 .expiryDate(LocalDate.now().plusDays(40))
                 .postedBy(savedRecruiter)
                 .jobStatus(JobStatus.ACTIVE)
                 .build();
 
         Job j6 = Job.builder()
-                .title("DevOps Engineer")
-                .description("Maintain CI/CD and cloud infrastructure.")
-                .salary(130000.0)
-                .location("Seattle, WA")
-                .companyName(savedGlobex.getName())
-                .experience(4.0f)
-                .jobType(JobType.FULLTIME)
-                .expiryDate(LocalDate.now().plusDays(50))
-                .postedBy(savedRecruiter)
-                .jobStatus(JobStatus.ACTIVE)
-                .build();
-
-        Job j7 = Job.builder()
-                .title("Mobile Engineer (iOS/Android)")
-                .description("Develop native and cross-platform mobile apps.")
-                .salary(125000.0)
+                .title("Part-Time Technical Content & API Writer")
+                .description("<h4>About the Role</h4><p>Author developer guides, API specifications, and SDK documentation for our developer platform.</p><h4>Requirements</h4><ul><li>2+ years experience in technical documentation or software engineering</li><li>Ability to write clean, concise Markdown and code examples</li></ul>")
+                .salary(8.0)
                 .location("Remote")
-                .companyName(savedAcme.getName())
-                .experience(3.5f)
-                .jobType(JobType.REMOTE)
-                .expiryDate(LocalDate.now().plusDays(35))
+                .companyName("Spotify")
+                .experience(2.0f)
+                .jobType(JobType.PARTTIME)
+                .expiryDate(LocalDate.now().plusDays(30))
                 .postedBy(savedRecruiter)
                 .jobStatus(JobStatus.ACTIVE)
                 .build();
 
-        Job j8 = Job.builder()
-                .title("Cloud Architect")
-                .description("Architect scalable cloud solutions and guide engineering teams.")
-                .salary(180000.0)
-                .location("San Jose, CA")
-                .companyName(savedGlobex.getName())
-                .experience(8.0f)
-                .jobType(JobType.FULLTIME)
-                .expiryDate(LocalDate.now().plusDays(75))
-                .postedBy(savedRecruiter)
-                .jobStatus(JobStatus.ACTIVE)
+        List<Job> savedJobs = jobRepository.saveAll(List.of(j1, j2, j3, j4, j5, j6));
+
+        // Sample application & bookmark
+        Application sampleApp = Application.builder()
+                .job(savedJobs.get(0))
+                .user(savedCandidate)
+                .status(ApplicationStatus.PENDING)
                 .build();
+        applicationRepository.save(sampleApp);
 
-        jobRepository.saveAll(List.of(j1, j2, j3, j4, j5, j6, j7, j8));
+        SavedJob sampleSaved = new SavedJob();
+        sampleSaved.setJob(savedJobs.get(1));
+        sampleSaved.setUser(savedCandidate);
+        savedJobRepository.save(sampleSaved);
 
-        logger.info("DATA INITIALIZER: Inserted sample users={}, companies={}, jobs={}",
-                userRepository.count(), companyRepository.count(), jobRepository.count());
-
+        logger.info("DATA INITIALIZER: Successfully initialized {} users, {} jobs, and sample applications.",
+                userRepository.count(), jobRepository.count());
     }
 }

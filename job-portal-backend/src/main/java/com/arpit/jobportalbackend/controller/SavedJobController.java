@@ -31,7 +31,7 @@ public class SavedJobController {
     @GetMapping
     public List<JobResponse> getAllSavedJobs(@RequestParam(required = false, defaultValue = "1") int pageNo,
                                              @RequestParam(required = false, defaultValue = "5") int pageSize) {
-        return savedJobService.getAllSavedJobs(PageRequest.of(pageNo,pageSize));
+        return savedJobService.getAllSavedJobs(PageRequest.of(Math.max(0, pageNo - 1), pageSize));
     }
 
 }

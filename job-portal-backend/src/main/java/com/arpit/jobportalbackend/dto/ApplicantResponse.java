@@ -11,4 +11,9 @@ public class ApplicantResponse {
     private String name;
     private String email;
     private String status;
+    private String resumeUrl;
+    private String profilePictureUrl;
+    private String companyName;
+    private String skills;
+    private Float experience;
 }

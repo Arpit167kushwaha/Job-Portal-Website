@@ -49,7 +49,9 @@ public class SavedJobServiceImpl implements SavedJobService {
 
     @Override
     public List<JobResponse> getAllSavedJobs(Pageable pageable){
-        return savedJobRepo.findAll(pageable)
+        String email = SecurityUtils.getLoggedInUserEmail();
+        User user = userRepo.findByEmail(email).orElseThrow(() -> new RuntimeException("User not found"));
+        return savedJobRepo.findByUserId(user.getId(), pageable)
                 .stream()
                 .map(this::mapToResponse)
                 .toList();

@@ -1,8 +1,13 @@
-import { IconBookmark, IconClockHour3 } from "@tabler/icons-react";
+import { IconBookmark, IconBookmarkFilled, IconClockHour3 } from "@tabler/icons-react";
 import { Divider, Text } from '@mantine/core';
 import { Link } from "react-router-dom";
+import { useState } from "react";
+import API from "../api/axiosInstance";
 
 const JobCard = (props: any) => { 
+    const [saved, setSaved] = useState<boolean>(!!props.saved);
+    const [saving, setSaving] = useState(false);
+
     const postedDaysValue = props.postedDays ?? null;
     let postedLabel = '1 day ago';
     if (postedDaysValue === null) {
@@ -15,9 +20,39 @@ const JobCard = (props: any) => {
         postedLabel = `${postedDaysValue} days ago`;
     }
 
+    const handleBookmark = async (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const token = localStorage.getItem('token');
+        if (!token) {
+            alert('Please login to bookmark jobs.');
+            return;
+        }
+
+        setSaving(true);
+        try {
+            if (saved) {
+                await API.delete(`/savedJobs/unsave/${props.id}`);
+                setSaved(false);
+            } else {
+                await API.post(`/savedJobs/save/${props.id}`);
+                setSaved(true);
+            }
+        } catch (err: any) {
+            console.error('Bookmark error:', err);
+            // If already saved, toggle state to true
+            if (err.response?.data?.message?.includes('Already Saved')) {
+                setSaved(true);
+            }
+        } finally {
+            setSaving(false);
+        }
+    };
+
     return (
         <Link to={`/jobs/${props.id}`} className="bg-mine-shaft-700 p-4 w-72 flex flex-col gap-3 rounded-xl hover:shadow-[0_0_7px_1px_yellow] !shadow-bright-sun-400 transition duration-300 ease-in-out cursor-pointer">
-             <div className="flex justify-between">
+             <div className="flex justify-between items-start">
                 <div className="flex gap-2 items-center">
                     <div className="p-2 bg-mine-shaft-600 rounded-md ">
                          <img className="h-7" src={`/Icons/${props.companyName || 'Google'}.png`} alt="logo" onError={(e) => e.currentTarget.src = '/Icons/Google.png'} />
@@ -29,7 +64,19 @@ const JobCard = (props: any) => {
                         </div>
                     </div>
                 </div>
-                <IconBookmark className="text-mine-shaft-300 cursor-pointer"/>
+                <button
+                    type="button"
+                    onClick={handleBookmark}
+                    disabled={saving}
+                    className="text-mine-shaft-300 hover:text-bright-sun-400 transition p-1 cursor-pointer bg-transparent border-none"
+                    title={saved ? "Remove Bookmark" : "Save Job"}
+                >
+                    {saved ? (
+                        <IconBookmarkFilled className="text-bright-sun-400" size={20} />
+                    ) : (
+                        <IconBookmark size={20} />
+                    )}
+                </button>
              </div>
              <div className="flex gap-2 [&>div]:py-1 [&>div]:px-2 [&>div]:bg-mine-shaft-600 [&>div]:text-bright-sun-400 [&>div]:rounded-lg text-xs">
                 <div>{props.experience} Yrs Exp</div>
@@ -50,6 +97,7 @@ const JobCard = (props: any) => {
                 </div>
              </div>
         </Link>
-    )
-}
+    );
+};
+
 export default JobCard;
